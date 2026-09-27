@@ -1,0 +1,37 @@
+STEP 5 - REVISION ESTATICA DE LA ENTREGA
+=======================================
+Estado: PREPARADO. Migracion y pruebas SQL NO ejecutadas.
+
+PASS - 5 tablas coinciden con las entidades esperadas del contrato v1.
+PASS - Nombres de columnas de las 5 tablas coinciden con schema-v1.catalog.json.
+PASS - RLS habilitado explicitamente en las 5 tablas.
+PASS - 12 funciones de migracion tienen search_path vacio explicito.
+PASS - 7 policies; sin apertura USING(true).
+PASS - No DROP/TRUNCATE ni usuarios de prueba en la migracion.
+PASS - No se crean tablas clinicas ni se exponen claves API en la entrega.
+PASS - Suite con 46 etiquetas de prueba unicas, numeradas 01-46.
+PASS - Suite usa helpers temporales invoker y termina en ROLLBACK.
+
+ESTO NO ES UN PARSER DE POSTGRESQL NI UNA PRUEBA RUNTIME.
+La revision anterior verifica estructura textual y coherencia con el catalogo.
+No comprueba compilacion PL/pgSQL, ejecucion de triggers, RLS, tiempos ni concurrencia.
+
+PRECHECK REMOTO DE SOLO LECTURA
+- Conector Supabase: proyecto agenda-local-os-dev, idmkambczhdhvspbrdci.
+- public/private sin tablas; lista de migraciones vacia al inicio.
+- Sin esquema private ni colisiones con los nombres de funcion previstos.
+- Se comprobaron columnas necesarias de auth.users y definiciones uid/jwt.
+- No se consultaron registros personales ni se solicitaron claves.
+
+LIMITACION DEL ENTORNO DEL ASISTENTE
+No habia PostgreSQL local disponible. La instalacion en el entorno aislado no
+pudo obtener dependencias por conectividad/DNS. No se hizo una ejecucion
+alternativa silenciosa contra la base de desarrollo del usuario.
+
+PENDIENTES
+- Guardar archivos en el repositorio de Jose.
+- Aplicar la migracion versionada con CLI al proyecto dev correcto.
+- Ejecutar inventario de solo lectura y suite SQL; esperado 46/46, aun no observado.
+- Repetir pruebas con dos conexiones concurrentes antes de lanzar cambios de owner.
+- Las pruebas HTTP, firma/renovacion de JWT y UI Auth pertenecen al Step 6.
+- Registrar resultados y confirmar commit/push antes de cerrar Step 5.
