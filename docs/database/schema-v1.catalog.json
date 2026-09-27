@@ -1,0 +1,3146 @@
+{
+  "version": "1.0-proposed",
+  "status": "design_only_not_applied",
+  "project_ref": "idmkambczhdhvspbrdci",
+  "managed_entities": [
+    "auth.users",
+    "storage.objects",
+    "storage.buckets"
+  ],
+  "required_entities": [
+    "organizations",
+    "organization_members",
+    "business_profiles",
+    "contacts",
+    "leads",
+    "pipeline_stages",
+    "activities",
+    "followups",
+    "appointments",
+    "campaigns",
+    "content_items",
+    "scripts",
+    "reviews",
+    "reactivation_campaigns",
+    "sops",
+    "courses",
+    "lessons",
+    "lesson_progress",
+    "prompts",
+    "ai_generations",
+    "metrics_events",
+    "patients",
+    "clinical_histories",
+    "clinical_history_sections",
+    "clinical_encounters",
+    "progress_notes",
+    "patient_documents",
+    "clinical_images",
+    "radiograph_ai_analyses",
+    "treatment_plans",
+    "treatment_plan_items",
+    "quotes",
+    "quote_items",
+    "consents",
+    "clinical_templates",
+    "clinical_ai_generations",
+    "clinical_audit_events"
+  ],
+  "tables": [
+    {
+      "name": "profiles",
+      "group": "01 Identidad y organizaciones",
+      "origin": "Propuesta tecnica",
+      "scope": "user",
+      "fields": "user_id:uuid PK/FK auth.users.id; display_name:text; locale:text=es-MX; created_at:timestamptz; updated_at:timestamptz",
+      "rules": "Perfil personal del usuario, sin roles ni datos de negocio. Lectura/escritura propia. No replicar password ni tokens de Auth.",
+      "query_indexes": "PK(user_id)",
+      "references": [],
+      "primary_key": [
+        "user_id"
+      ],
+      "common_columns": [],
+      "reference_unique_keys": [],
+      "field_names": [
+        "user_id",
+        "display_name",
+        "locale",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "organizations",
+      "group": "01 Identidad y organizaciones",
+      "origin": "Master Prompt",
+      "scope": "organization",
+      "fields": "name:text; slug:text; industry:text=general; timezone:text=America/Mexico_City; currency:char(3)=MXN; healthcare_enabled:boolean=false; clinical_ai_enabled:boolean=false; status:text=active; created_by_user_id:uuid FK auth.users.id",
+      "rules": "UNIQUE(slug). industry: general/dental/medical; healthcare_enabled implica dental o medical; clinical_ai_enabled implica healthcare_enabled. status: active/suspended/archived. El id de esta fila es el tenant; no lleva organization_id a si misma.",
+      "query_indexes": "UNIQUE(slug)",
+      "references": [],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [],
+      "field_names": [
+        "name",
+        "slug",
+        "industry",
+        "timezone",
+        "currency",
+        "healthcare_enabled",
+        "clinical_ai_enabled",
+        "status",
+        "created_by_user_id",
+        "id",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "organization_members",
+      "group": "01 Identidad y organizaciones",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "user_id:uuid FK auth.users.id; role:text=member; clinical_role:text?; clinical_scope:text=assigned; status:text=active; joined_at:timestamptz",
+      "rules": "UNIQUE(organization_id,user_id). role: owner/admin/member. clinical_role: doctor/dentist/clinical_assistant/reception o NULL. clinical_scope: assigned/organization. Cambios de rol/alcance solo por operacion autorizada; nunca UPDATE libre ni user_metadata. No eliminar al ultimo owner activo; suspender sin borrar autoria.",
+      "query_indexes": "(user_id,status,organization_id)",
+      "references": [],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "user_id",
+        "role",
+        "clinical_role",
+        "clinical_scope",
+        "status",
+        "joined_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "business_profiles",
+      "group": "01 Identidad y organizaciones",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "city:text?; ideal_customer:text?; whatsapp_phone:text?; tone:text?; primary_goal:text?; onboarding_step:smallint=0; onboarding_completed_at:timestamptz?",
+      "rules": "UNIQUE(organization_id). onboarding_step entre 0 y 9. Nombre/industria se leen de organizations; servicios y precios se leen de services. No duplicarlos en arrays mutables.",
+      "query_indexes": "UNIQUE(organization_id)",
+      "references": [],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "city",
+        "ideal_customer",
+        "whatsapp_phone",
+        "tone",
+        "primary_goal",
+        "onboarding_step",
+        "onboarding_completed_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "services",
+      "group": "01 Identidad y organizaciones",
+      "origin": "Propuesta tecnica",
+      "scope": "tenant",
+      "fields": "code:text; name:text; description:text?; price:numeric(14,2)=0; duration_minutes:integer?; active:boolean=true",
+      "rules": "UNIQUE(organization_id,code). price >= 0; duration_minutes > 0 si existe. Moneda heredada de organization. Un precio historico en un presupuesto no cambia al editar el catalogo.",
+      "query_indexes": "(organization_id,active,name)",
+      "references": [],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "code",
+        "name",
+        "description",
+        "price",
+        "duration_minutes",
+        "active",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "member_permissions",
+      "group": "01 Identidad y organizaciones",
+      "origin": "Propuesta tecnica",
+      "scope": "tenant",
+      "fields": "member_id:uuid; permission:text; granted_by_member_id:uuid?; grant_source:text; revoked_at:timestamptz?",
+      "rules": "Una concesion activa por miembro/permission, mediante indice UNIQUE parcial WHERE revoked_at IS NULL. permission pertenece a catalogo cerrado: clinical.read/write/approve/files.read/files.write/ai.request/access.manage, quotes.read/write/discount, audit.read. grant_source: system/human; human exige granted_by. Cambios auditados y sujetos a autorizacion distinta de owner/admin comercial.",
+      "query_indexes": "(organization_id,member_id,permission) WHERE revoked_at IS NULL",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "granted_by_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "member_id",
+        "permission",
+        "granted_by_member_id",
+        "grant_source",
+        "revoked_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "patient_care_team",
+      "group": "01 Identidad y organizaciones",
+      "origin": "Propuesta tecnica",
+      "scope": "tenant",
+      "fields": "patient_id:uuid; member_id:uuid; granted_by_member_id:uuid?; active:boolean=true",
+      "rules": "UNIQUE(organization_id,patient_id,member_id). Es alcance de pacientes, no permiso por si solo. Acceso requiere ademas membership activo y permiso clinico. Un usuario con clinical_scope=assigned necesita esta asignacion activa.",
+      "query_indexes": "(organization_id,member_id,active,patient_id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "granted_by_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "member_id",
+        "granted_by_member_id",
+        "active",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "contacts",
+      "group": "02 CRM y agenda",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "display_name:text; email:text?; phone:text?; source:text?; customer_since:timestamptz?; archived_at:timestamptz?",
+      "rules": "Nombre no vacio. email/phone no son UNIQUE globales ni por tenant: pueden compartirse. No almacenar diagnosticos ni notas clinicas. Cliente se identifica por customer_since; no se crea otra tabla clients para duplicar identidad.",
+      "query_indexes": "(organization_id,created_at DESC,id); (organization_id,lower(email)); (organization_id,phone)",
+      "references": [],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "display_name",
+        "email",
+        "phone",
+        "source",
+        "customer_since",
+        "archived_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "pipeline_stages",
+      "group": "02 CRM y agenda",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "stage_key:text; name:text; position:integer; active:boolean=true",
+      "rules": "UNIQUE(organization_id,stage_key), UNIQUE(organization_id,position) DEFERRABLE. Ocho etapas iniciales: Nuevo, Contactado, Interesado, Cita propuesta, Cita agendada, Cliente, Seguimiento, Perdido. Reordenar dentro de una transaccion.",
+      "query_indexes": "(organization_id,position)",
+      "references": [],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "stage_key",
+        "name",
+        "position",
+        "active",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "leads",
+      "group": "02 CRM y agenda",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "contact_id:uuid; stage_id:uuid; service_id:uuid?; assigned_member_id:uuid?; title:text; source:text?; estimated_value:numeric(14,2)=0; status:text=open; converted_at:timestamptz?; closed_at:timestamptz?",
+      "rules": "status: open/won/lost. estimated_value >= 0. Una persona puede tener varias oportunidades. Cambio de etapa, conversion y registro en activities deben ser atomicos. Pasar a Seguimiento no debe deshacer customer_since; la conversion es un evento explicito.",
+      "query_indexes": "(organization_id,stage_id,created_at DESC,id); (organization_id,contact_id,id); (organization_id,assigned_member_id,status)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "contact_id"
+          ],
+          "target": "contacts",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "stage_id"
+          ],
+          "target": "pipeline_stages",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "service_id"
+          ],
+          "target": "services",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "assigned_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ],
+        [
+          "organization_id",
+          "contact_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "contact_id",
+        "stage_id",
+        "service_id",
+        "assigned_member_id",
+        "title",
+        "source",
+        "estimated_value",
+        "status",
+        "converted_at",
+        "closed_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "activities",
+      "group": "02 CRM y agenda",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "contact_id:uuid; lead_id:uuid?; actor_member_id:uuid?; kind:text; body:text?; metadata:jsonb={}; occurred_at:timestamptz",
+      "rules": "kind: administrative_note/call/message/stage_change/conversion. Solo contexto administrativo; metadata con lista de campos permitidos. Timeline append-only; correcciones como evento nuevo. Lead opcional debe pertenecer al MISMO contacto.",
+      "query_indexes": "(organization_id,contact_id,occurred_at DESC,id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "contact_id"
+          ],
+          "target": "contacts",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "contact_id",
+            "lead_id"
+          ],
+          "target": "leads",
+          "target_columns": [
+            "organization_id",
+            "contact_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "actor_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "contact_id",
+        "lead_id",
+        "actor_member_id",
+        "kind",
+        "body",
+        "metadata",
+        "occurred_at",
+        "id",
+        "created_at",
+        "organization_id"
+      ]
+    },
+    {
+      "name": "followups",
+      "group": "02 CRM y agenda",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "contact_id:uuid; lead_id:uuid?; assigned_member_id:uuid?; due_at:timestamptz; status:text=pending; result:text?; completed_at:timestamptz?",
+      "rules": "status: pending/completed/cancelled. completed exige completed_at y resultado. Vencidos/Hoy/Manana son filtros calculados con timezone del negocio, no estados adicionales.",
+      "query_indexes": "(organization_id,due_at,id) WHERE status = pending; (organization_id,contact_id,id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "contact_id"
+          ],
+          "target": "contacts",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "contact_id",
+            "lead_id"
+          ],
+          "target": "leads",
+          "target_columns": [
+            "organization_id",
+            "contact_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "assigned_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "contact_id",
+        "lead_id",
+        "assigned_member_id",
+        "due_at",
+        "status",
+        "result",
+        "completed_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "appointments",
+      "group": "02 CRM y agenda",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "contact_id:uuid; lead_id:uuid?; assigned_member_id:uuid?; service_id:uuid?; starts_at:timestamptz; ends_at:timestamptz; status:text=scheduled; administrative_note:text?",
+      "rules": "ends_at > starts_at. status: scheduled/confirmed/completed/cancelled/no_show. Relacion con lead mantiene contacto. Solapamientos de recursos se resolveran en el modulo de citas; no se presume que todos los negocios tengan la misma politica.",
+      "query_indexes": "(organization_id,starts_at,id); (organization_id,contact_id,starts_at DESC); (organization_id,assigned_member_id,starts_at)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "contact_id"
+          ],
+          "target": "contacts",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "contact_id",
+            "lead_id"
+          ],
+          "target": "leads",
+          "target_columns": [
+            "organization_id",
+            "contact_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "assigned_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "service_id"
+          ],
+          "target": "services",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ],
+        [
+          "organization_id",
+          "contact_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "contact_id",
+        "lead_id",
+        "assigned_member_id",
+        "service_id",
+        "starts_at",
+        "ends_at",
+        "status",
+        "administrative_note",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "communication_preferences",
+      "group": "02 CRM y agenda",
+      "origin": "Propuesta tecnica",
+      "scope": "tenant",
+      "fields": "contact_id:uuid; channel:text; preference:text=unknown; source:text; recorded_at:timestamptz",
+      "rules": "UNIQUE(organization_id,contact_id,channel). channel: email/whatsapp/sms/phone. preference: unknown/opted_in/opted_out. No asumir consentimiento por existir un contacto. Registrar evidencia de cambios; validacion juridica por canal pendiente, no se afirma cumplimiento legal.",
+      "query_indexes": "UNIQUE(organization_id,contact_id,channel)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "contact_id"
+          ],
+          "target": "contacts",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "contact_id",
+        "channel",
+        "preference",
+        "source",
+        "recorded_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "scripts",
+      "group": "03 Marketing y bibliotecas",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "title:text; category:text; body:text; variables:jsonb=[]; active:boolean=true",
+      "rules": "variables es una lista validada de nombres, no SQL/codigo ejecutable. Contenido inicial se copia por tenant. No usar organization_id NULL para bibliotecas globales.",
+      "query_indexes": "(organization_id,category,active)",
+      "references": [],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "title",
+        "category",
+        "body",
+        "variables",
+        "active",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "script_favorites",
+      "group": "03 Marketing y bibliotecas",
+      "origin": "Propuesta tecnica",
+      "scope": "tenant",
+      "fields": "member_id:uuid; script_id:uuid",
+      "rules": "UNIQUE(organization_id,member_id,script_id). Favorito individual; no columna is_favorite compartida por toda la organizacion.",
+      "query_indexes": "(organization_id,script_id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "script_id"
+          ],
+          "target": "scripts",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "member_id",
+        "script_id",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "prompts",
+      "group": "03 Marketing y bibliotecas",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "title:text; category:text; body:text; variables:jsonb=[]; version:integer=1; active:boolean=true",
+      "rules": "version > 0. Categorias del Master Prompt: Marketing, Sales, Content, WhatsApp, Research, Offers, Ads, Customer Service, Productivity. Nunca incrustar secretos en el texto.",
+      "query_indexes": "(organization_id,category,active)",
+      "references": [],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "title",
+        "category",
+        "body",
+        "variables",
+        "version",
+        "active",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "prompt_favorites",
+      "group": "03 Marketing y bibliotecas",
+      "origin": "Propuesta tecnica",
+      "scope": "tenant",
+      "fields": "member_id:uuid; prompt_id:uuid",
+      "rules": "UNIQUE(organization_id,member_id,prompt_id). Propiedad de la preferencia individual.",
+      "query_indexes": "(organization_id,prompt_id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "prompt_id"
+          ],
+          "target": "prompts",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "member_id",
+        "prompt_id",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "campaigns",
+      "group": "03 Marketing y bibliotecas",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "name:text; objective:text; audience:text; offer:text; channel:text; initial_message:text?; cta:text?; followup_plan:jsonb=[]; kpi_definition:jsonb={}; status:text=draft; scheduled_at:timestamptz?",
+      "rules": "status: draft/ready/active/completed/archived. Plan persistente no equivale a envio real. JSON con esquema y sin IDs de entidades que deban tener FK.",
+      "query_indexes": "(organization_id,status,created_at DESC,id)",
+      "references": [],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "name",
+        "objective",
+        "audience",
+        "offer",
+        "channel",
+        "initial_message",
+        "cta",
+        "followup_plan",
+        "kpi_definition",
+        "status",
+        "scheduled_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "content_items",
+      "group": "03 Marketing y bibliotecas",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "campaign_id:uuid?; channel:text; content_type:text; body:text; status:text=idea; planned_at:timestamptz?; published_at:timestamptz?; external_url:text?",
+      "rules": "status: idea/pending/created/published. Publicado requiere confirmacion de publicacion y published_at; no marcar publicado al generar texto IA.",
+      "query_indexes": "(organization_id,planned_at,id); (organization_id,campaign_id,id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "campaign_id"
+          ],
+          "target": "campaigns",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "campaign_id",
+        "channel",
+        "content_type",
+        "body",
+        "status",
+        "planned_at",
+        "published_at",
+        "external_url",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "reviews",
+      "group": "03 Marketing y bibliotecas",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "contact_id:uuid; appointment_id:uuid?; status:text=pending; request_message:text?; requested_at:timestamptz?; received_at:timestamptz?; external_url:text?",
+      "rules": "status: pending/requested/received. Appointment debe corresponder al contacto. Registrar una solicitud no demuestra que se haya publicado una resena.",
+      "query_indexes": "(organization_id,status,created_at DESC); (organization_id,contact_id,id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "contact_id"
+          ],
+          "target": "contacts",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "contact_id",
+            "appointment_id"
+          ],
+          "target": "appointments",
+          "target_columns": [
+            "organization_id",
+            "contact_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "contact_id",
+        "appointment_id",
+        "status",
+        "request_message",
+        "requested_at",
+        "received_at",
+        "external_url",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "reactivation_campaigns",
+      "group": "03 Marketing y bibliotecas",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "name:text; inactivity_days:integer; channel:text; message_template:text; segment_snapshot_at:timestamptz?; status:text=draft",
+      "rules": "inactivity_days IN (30,60,90,180,365). status: draft/ready/active/completed/archived. Definir actividad comercial elegible sin consultar contenido clinico.",
+      "query_indexes": "(organization_id,status,created_at DESC)",
+      "references": [],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "name",
+        "inactivity_days",
+        "channel",
+        "message_template",
+        "segment_snapshot_at",
+        "status",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "reactivation_recipients",
+      "group": "03 Marketing y bibliotecas",
+      "origin": "Propuesta tecnica",
+      "scope": "tenant",
+      "fields": "reactivation_campaign_id:uuid; contact_id:uuid; status:text=pending; last_activity_at:timestamptz?; message_snapshot:text?; contacted_at:timestamptz?; reactivated_at:timestamptz?",
+      "rules": "UNIQUE(organization_id,reactivation_campaign_id,contact_id). status: pending/contacted/reactivated/excluded. Volver a comprobar preferencias antes de enviar. La captura de segmento evita que la lista cambie silenciosamente.",
+      "query_indexes": "(organization_id,contact_id,id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "reactivation_campaign_id"
+          ],
+          "target": "reactivation_campaigns",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "contact_id"
+          ],
+          "target": "contacts",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "reactivation_campaign_id",
+        "contact_id",
+        "status",
+        "last_activity_at",
+        "message_snapshot",
+        "contacted_at",
+        "reactivated_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "sops",
+      "group": "03 Marketing y bibliotecas",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "slug:text; title:text; objective:text; duration_minutes:integer?; steps:jsonb=[]; checklist:jsonb=[]; script_examples:jsonb=[]; kpi_definition:jsonb={}; version:integer=1",
+      "rules": "UNIQUE(organization_id,slug). JSON guarda contenido y ejemplos, no relaciones sin FK. Version positiva; conservar versiones publicadas cuando sean consumidas.",
+      "query_indexes": "(organization_id,title)",
+      "references": [],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "slug",
+        "title",
+        "objective",
+        "duration_minutes",
+        "steps",
+        "checklist",
+        "script_examples",
+        "kpi_definition",
+        "version",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "courses",
+      "group": "03 Marketing y bibliotecas",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "slug:text; title:text; description:text?; status:text=draft",
+      "rules": "UNIQUE(organization_id,slug). status: draft/published/archived. Distribucion inicial mediante copia tenant de plantillas, no datos privados globales.",
+      "query_indexes": "(organization_id,status)",
+      "references": [],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "slug",
+        "title",
+        "description",
+        "status",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "lessons",
+      "group": "03 Marketing y bibliotecas",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "course_id:uuid; title:text; position:integer; content:jsonb={}; duration_minutes:integer?; active:boolean=true",
+      "rules": "UNIQUE(organization_id,course_id,position) DEFERRABLE. position >= 0; contenido validado y sanitizado en renderizado.",
+      "query_indexes": "(organization_id,course_id,position)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "course_id"
+          ],
+          "target": "courses",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "course_id",
+        "title",
+        "position",
+        "content",
+        "duration_minutes",
+        "active",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "lesson_progress",
+      "group": "03 Marketing y bibliotecas",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "member_id:uuid; lesson_id:uuid; progress_percent:smallint=0; completed_at:timestamptz?",
+      "rules": "UNIQUE(organization_id,member_id,lesson_id). Progreso entre 0 y 100; completed_at exige 100. Usuario actualiza solo su progreso autorizado.",
+      "query_indexes": "(organization_id,lesson_id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "lesson_id"
+          ],
+          "target": "lessons",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "member_id",
+        "lesson_id",
+        "progress_percent",
+        "completed_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "ai_generations",
+      "group": "04 IA, metricas y auditoria",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "requested_by_member_id:uuid; operation:text; provider:text; model:text; prompt_version:text; status:text=pending; sanitized_input:jsonb={}; output:jsonb?; input_tokens:integer?; output_tokens:integer?; error_code:text?; finished_at:timestamptz?",
+      "rules": "Solo IA comercial. status: pending/running/succeeded/failed/cancelled. No almacenar API keys ni contenido clinico. Tokens no negativos cuando se conozcan. Estado exitoso requiere resultado, no un mock silencioso.",
+      "query_indexes": "(organization_id,requested_by_member_id,created_at DESC,id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "requested_by_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "requested_by_member_id",
+        "operation",
+        "provider",
+        "model",
+        "prompt_version",
+        "status",
+        "sanitized_input",
+        "output",
+        "input_tokens",
+        "output_tokens",
+        "error_code",
+        "finished_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "metrics_events",
+      "group": "04 IA, metricas y auditoria",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "event_name:text; contact_id:uuid?; lead_id:uuid?; actor_member_id:uuid?; occurred_at:timestamptz; idempotency_key:text; properties:jsonb={}",
+      "rules": "UNIQUE(organization_id,idempotency_key). Append-only. Solo eventos administrativos validados; no clinicos. Si lead_id existe, contact_id debe existir y coincidir. Las metricas agregadas se calculan, no se inventan ni duplican como valores manuales.",
+      "query_indexes": "(organization_id,event_name,occurred_at DESC,id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "contact_id"
+          ],
+          "target": "contacts",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "contact_id",
+            "lead_id"
+          ],
+          "target": "leads",
+          "target_columns": [
+            "organization_id",
+            "contact_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "actor_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "event_name",
+        "contact_id",
+        "lead_id",
+        "actor_member_id",
+        "occurred_at",
+        "idempotency_key",
+        "properties",
+        "id",
+        "created_at",
+        "organization_id"
+      ]
+    },
+    {
+      "name": "audit_events",
+      "group": "04 IA, metricas y auditoria",
+      "origin": "Propuesta tecnica",
+      "scope": "tenant",
+      "fields": "actor_member_id:uuid?; actor_kind:text; action:text; entity_type:text; entity_id:uuid?; occurred_at:timestamptz; safe_metadata:jsonb={}",
+      "rules": "Append-only. actor_kind: member/system; miembro exige actor_member_id. entity_id es referencia historica intencional, no base de autorizacion ni FK polimorfica. Sin textos clinicos, passwords o tokens. Sin UPDATE/DELETE desde cliente.",
+      "query_indexes": "(organization_id,occurred_at DESC,id); (organization_id,entity_type,entity_id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "actor_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "actor_member_id",
+        "actor_kind",
+        "action",
+        "entity_type",
+        "entity_id",
+        "occurred_at",
+        "safe_metadata",
+        "id",
+        "created_at",
+        "organization_id"
+      ]
+    },
+    {
+      "name": "patients",
+      "group": "05 Expediente y atencion clinica",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "contact_id:uuid; record_number:text; birth_date:date?; demographic_data:jsonb={}; archived_at:timestamptz?",
+      "rules": "UNIQUE(organization_id,contact_id), UNIQUE(organization_id,record_number). Contacto 0..1 paciente por organizacion. No duplicar telefono/email/nombre. Demografia adicional permanece protegida en el contexto clinico.",
+      "query_indexes": "(organization_id,record_number)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "contact_id"
+          ],
+          "target": "contacts",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ],
+        [
+          "organization_id",
+          "contact_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "contact_id",
+        "record_number",
+        "birth_date",
+        "demographic_data",
+        "archived_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "clinical_templates",
+      "group": "05 Expediente y atencion clinica",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "template_key:text; kind:text; specialty:text; version:integer; definition:jsonb; active:boolean=true",
+      "rules": "UNIQUE(organization_id,template_key,version). kind: history/progress_note/consent. Version > 0. La version publicada/usada no se sobrescribe; una modificacion crea nueva version.",
+      "query_indexes": "(organization_id,kind,specialty,active)",
+      "references": [],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "template_key",
+        "kind",
+        "specialty",
+        "version",
+        "definition",
+        "active",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "clinical_histories",
+      "group": "05 Expediente y atencion clinica",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "patient_id:uuid; template_id:uuid; version:integer; status:text=draft; supersedes_history_id:uuid?; authored_by_member_id:uuid; finalized_by_member_id:uuid?; finalized_at:timestamptz?",
+      "rules": "UNIQUE(organization_id,patient_id,version). status: draft/final. Final exige aprobador y fecha. La historia y secciones finales se vuelven inmutables; una correccion crea version nueva del mismo paciente. Prevencion de ciclos en supersedes mediante transaccion/trigger.",
+      "query_indexes": "(organization_id,patient_id,created_at DESC,id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "template_id"
+          ],
+          "target": "clinical_templates",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "supersedes_history_id"
+          ],
+          "target": "clinical_histories",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "authored_by_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "finalized_by_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ],
+        [
+          "organization_id",
+          "patient_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "template_id",
+        "version",
+        "status",
+        "supersedes_history_id",
+        "authored_by_member_id",
+        "finalized_by_member_id",
+        "finalized_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "clinical_history_sections",
+      "group": "05 Expediente y atencion clinica",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "patient_id:uuid; history_id:uuid; section_key:text; position:integer; payload:jsonb",
+      "rules": "UNIQUE(organization_id,history_id,section_key). Una seccion pertenece a historia y paciente coincidentes. payload validado contra la version de plantilla. Bloquear cambios de secciones cuando la historia esta finalizada.",
+      "query_indexes": "(organization_id,history_id,position)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "history_id"
+          ],
+          "target": "clinical_histories",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "history_id",
+        "section_key",
+        "position",
+        "payload",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "clinical_encounters",
+      "group": "05 Expediente y atencion clinica",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "patient_id:uuid; contact_id:uuid; appointment_id:uuid?; practitioner_member_id:uuid; started_at:timestamptz; ended_at:timestamptz?; status:text=in_progress; reason:text?",
+      "rules": "status: in_progress/completed/cancelled. ended_at >= started_at. FK paciente+contacto y cita+contacto garantizan que la cita corresponde al paciente, no solo al tenant. Maximo un encuentro por cita no nula, UNIQUE parcial. Completar cita no firma notas.",
+      "query_indexes": "(organization_id,patient_id,started_at DESC,id); UNIQUE(organization_id,appointment_id) WHERE appointment_id IS NOT NULL",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "contact_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "contact_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "contact_id"
+          ],
+          "target": "contacts",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "contact_id",
+            "appointment_id"
+          ],
+          "target": "appointments",
+          "target_columns": [
+            "organization_id",
+            "contact_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "practitioner_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ],
+        [
+          "organization_id",
+          "patient_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "contact_id",
+        "appointment_id",
+        "practitioner_member_id",
+        "started_at",
+        "ended_at",
+        "status",
+        "reason",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "progress_notes",
+      "group": "05 Expediente y atencion clinica",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "patient_id:uuid; encounter_id:uuid; authored_by_member_id:uuid; template_id:uuid?; version:integer; source:text=manual; ai_generation_id:uuid?; content:jsonb; status:text=draft; supersedes_note_id:uuid?; approved_by_member_id:uuid?; approved_at:timestamptz?",
+      "rules": "UNIQUE(organization_id,encounter_id,version). status: draft/final; source: manual/ai. source=ai exige ai_generation_id. Final exige aprobacion explicita con permiso clinical.approve. Contenido final inmutable; correcciones por version/adenda. Comprobar que AI y nota corresponden tambien al mismo encuentro cuando AI lo tenga. supersedes dentro del mismo encuentro.",
+      "query_indexes": "(organization_id,patient_id,created_at DESC,id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "encounter_id"
+          ],
+          "target": "clinical_encounters",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "template_id"
+          ],
+          "target": "clinical_templates",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "ai_generation_id"
+          ],
+          "target": "clinical_ai_generations",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "encounter_id",
+            "supersedes_note_id"
+          ],
+          "target": "progress_notes",
+          "target_columns": [
+            "organization_id",
+            "encounter_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "authored_by_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "approved_by_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ],
+        [
+          "organization_id",
+          "encounter_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "encounter_id",
+        "authored_by_member_id",
+        "template_id",
+        "version",
+        "source",
+        "ai_generation_id",
+        "content",
+        "status",
+        "supersedes_note_id",
+        "approved_by_member_id",
+        "approved_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "patient_documents",
+      "group": "05 Expediente y atencion clinica",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "patient_id:uuid; encounter_id:uuid?; uploaded_by_member_id:uuid; bucket_id:text; object_path:text; original_filename:text; mime_type:text; size_bytes:bigint; sha256:text?; category:text; status:text=pending",
+      "rules": "UNIQUE(bucket_id,object_path). size_bytes >= 0 con limite configurable. status: pending/available/quarantined/deleted. Ubicacion privada sin URL firmada persistida. Operaciones Storage via API, no DML directo a storage.objects. No asumir atomicidad entre archivo y metadata.",
+      "query_indexes": "(organization_id,patient_id,created_at DESC,id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "encounter_id"
+          ],
+          "target": "clinical_encounters",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "uploaded_by_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ],
+        [
+          "organization_id",
+          "patient_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "encounter_id",
+        "uploaded_by_member_id",
+        "bucket_id",
+        "object_path",
+        "original_filename",
+        "mime_type",
+        "size_bytes",
+        "sha256",
+        "category",
+        "status",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "clinical_images",
+      "group": "05 Expediente y atencion clinica",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "patient_id:uuid; encounter_id:uuid?; uploaded_by_member_id:uuid; bucket_id:text; object_path:text; original_filename:text; mime_type:text; size_bytes:bigint; image_type:text; acquired_at:timestamptz?; deidentification_reviewed:boolean=false; status:text=pending",
+      "rules": "UNIQUE(bucket_id,object_path). Archivo privado; image_type usa catalogo validado. Revision de anonimato no se infiere de la extension. status: pending/available/quarantined/deleted. Analisis IA solo a peticion, no al subir.",
+      "query_indexes": "(organization_id,patient_id,acquired_at DESC,id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "encounter_id"
+          ],
+          "target": "clinical_encounters",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "uploaded_by_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ],
+        [
+          "organization_id",
+          "patient_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "encounter_id",
+        "uploaded_by_member_id",
+        "bucket_id",
+        "object_path",
+        "original_filename",
+        "mime_type",
+        "size_bytes",
+        "image_type",
+        "acquired_at",
+        "deidentification_reviewed",
+        "status",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "consents",
+      "group": "05 Expediente y atencion clinica",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "patient_id:uuid; encounter_id:uuid?; template_id:uuid; document_id:uuid?; status:text=draft; granted_at:timestamptz?; revoked_at:timestamptz?; recorded_by_member_id:uuid; evidence_metadata:jsonb={}",
+      "rules": "status: draft/granted/revoked. granted exige evidencia y fecha; revoked exige fecha. Documento/encuentro del mismo paciente. Registro de evidencia no equivale por si mismo a firma electronica legalmente valida.",
+      "query_indexes": "(organization_id,patient_id,status)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "encounter_id"
+          ],
+          "target": "clinical_encounters",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "template_id"
+          ],
+          "target": "clinical_templates",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "document_id"
+          ],
+          "target": "patient_documents",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "recorded_by_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "encounter_id",
+        "template_id",
+        "document_id",
+        "status",
+        "granted_at",
+        "revoked_at",
+        "recorded_by_member_id",
+        "evidence_metadata",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "treatment_plans",
+      "group": "06 Planes y presupuestos clinicos",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "patient_id:uuid; encounter_id:uuid?; authored_by_member_id:uuid; title:text; clinical_notes:text?; currency:char(3); status:text=draft",
+      "rules": "status: draft/presented/accepted/partially_accepted/rejected/completed. Datos clinicos; recepcion no recibe automaticamente detalles. Estado debe concordar con items en operacion transaccional.",
+      "query_indexes": "(organization_id,patient_id,status)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "encounter_id"
+          ],
+          "target": "clinical_encounters",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "authored_by_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ],
+        [
+          "organization_id",
+          "patient_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "encounter_id",
+        "authored_by_member_id",
+        "title",
+        "clinical_notes",
+        "currency",
+        "status",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "treatment_plan_items",
+      "group": "06 Planes y presupuestos clinicos",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "patient_id:uuid; plan_id:uuid; service_id:uuid?; procedure_label:text; tooth_or_region:text?; position:integer; quantity:numeric(10,2); unit_price:numeric(14,2); discount_amount:numeric(14,2)=0; status:text=proposed",
+      "rules": "quantity > 0, unit_price >= 0, 0 <= discount_amount <= round(quantity*unit_price,2). status: proposed/accepted/rejected/completed. Snapshot de precio/texto. tooth_or_region no implica odontograma implementado. Total de linea calculado; moneda del plan.",
+      "query_indexes": "(organization_id,plan_id,position)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "plan_id"
+          ],
+          "target": "treatment_plans",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "service_id"
+          ],
+          "target": "services",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ],
+        [
+          "organization_id",
+          "plan_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "plan_id",
+        "service_id",
+        "procedure_label",
+        "tooth_or_region",
+        "position",
+        "quantity",
+        "unit_price",
+        "discount_amount",
+        "status",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "quotes",
+      "group": "06 Planes y presupuestos clinicos",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "patient_id:uuid; plan_id:uuid?; quote_number:text; revision:integer=1; supersedes_quote_id:uuid?; currency:char(3); status:text=draft; valid_until:date?; presented_at:timestamptz?; authored_by_member_id:uuid",
+      "rules": "UNIQUE(organization_id,quote_number,revision). Estados segun Master Prompt: draft/presented/accepted/partially_accepted/rejected/completed. Presupuesto clinico protegido incluso si aparece en ficha CRM. Al presentar, congelar cantidades/precios; cambios como revision. Total calculado desde items, no numero arbitrario del cliente.",
+      "query_indexes": "(organization_id,patient_id,status)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "plan_id"
+          ],
+          "target": "treatment_plans",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "supersedes_quote_id"
+          ],
+          "target": "quotes",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "authored_by_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ],
+        [
+          "organization_id",
+          "patient_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "plan_id",
+        "quote_number",
+        "revision",
+        "supersedes_quote_id",
+        "currency",
+        "status",
+        "valid_until",
+        "presented_at",
+        "authored_by_member_id",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "quote_items",
+      "group": "06 Planes y presupuestos clinicos",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "patient_id:uuid; quote_id:uuid; plan_id:uuid?; plan_item_id:uuid?; service_id:uuid?; description:text; position:integer; quantity:numeric(10,2); unit_price:numeric(14,2); discount_amount:numeric(14,2)=0; decision:text=pending",
+      "rules": "quantity > 0; precios/descuentos como plan_items. decision: pending/accepted/rejected. Si plan_item_id existe, plan_id obligatorio y debe coincidir con el plan del presupuesto; trigger/operacion transaccional valida esta regla entre filas. FK item+plan y paciente+quote. No copiar diagnosticos al resumen administrativo.",
+      "query_indexes": "(organization_id,quote_id,position)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "quote_id"
+          ],
+          "target": "quotes",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "plan_id"
+          ],
+          "target": "treatment_plans",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "plan_id",
+            "plan_item_id"
+          ],
+          "target": "treatment_plan_items",
+          "target_columns": [
+            "organization_id",
+            "plan_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "service_id"
+          ],
+          "target": "services",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "quote_id",
+        "plan_id",
+        "plan_item_id",
+        "service_id",
+        "description",
+        "position",
+        "quantity",
+        "unit_price",
+        "discount_amount",
+        "decision",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "clinical_ai_generations",
+      "group": "07 IA y auditoria clinicas",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "patient_id:uuid; encounter_id:uuid?; requested_by_member_id:uuid; operation:text; provider:text; model:text; prompt_version:text; status:text=pending; input_manifest:jsonb={}; original_output:jsonb?; error_code:text?; finished_at:timestamptz?",
+      "rules": "operation: image_analysis/note_draft/transcription. status: pending/running/succeeded/failed/cancelled. Original exitoso inmutable; salida NO es diagnostico ni nota aprobada. Manifest minimizado; no guardar audio/texto completo sin necesidad. El analisis clinico no aparece en ai_generations comercial.",
+      "query_indexes": "(organization_id,patient_id,created_at DESC,id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "encounter_id"
+          ],
+          "target": "clinical_encounters",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "requested_by_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ],
+        [
+          "organization_id",
+          "patient_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "encounter_id",
+        "requested_by_member_id",
+        "operation",
+        "provider",
+        "model",
+        "prompt_version",
+        "status",
+        "input_manifest",
+        "original_output",
+        "error_code",
+        "finished_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "radiograph_ai_analyses",
+      "group": "07 IA y auditoria clinicas",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "patient_id:uuid; clinical_image_id:uuid; generation_id:uuid; review_status:text=pending; reviewed_result:jsonb?; reviewed_by_member_id:uuid?; reviewed_at:timestamptz?",
+      "rules": "UNIQUE(organization_id,generation_id). Ambos recursos del mismo paciente. review_status: pending/accepted/edited/discarded. Revision distinta de pending exige revisor/fecha. Resultado original permanece en clinical_ai_generations; guardar version revisada separada. Nuevas revisiones conservan trazabilidad, no reescriben original.",
+      "query_indexes": "(organization_id,patient_id,created_at DESC,id); (organization_id,clinical_image_id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "clinical_image_id"
+          ],
+          "target": "clinical_images",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "patient_id",
+            "generation_id"
+          ],
+          "target": "clinical_ai_generations",
+          "target_columns": [
+            "organization_id",
+            "patient_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "reviewed_by_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT",
+        "updated_at:timestamptz default now()"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "clinical_image_id",
+        "generation_id",
+        "review_status",
+        "reviewed_result",
+        "reviewed_by_member_id",
+        "reviewed_at",
+        "id",
+        "created_at",
+        "organization_id",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "clinical_audit_events",
+      "group": "07 IA y auditoria clinicas",
+      "origin": "Master Prompt",
+      "scope": "tenant",
+      "fields": "patient_id:uuid?; actor_member_id:uuid?; actor_kind:text; action:text; entity_type:text; entity_id:uuid?; occurred_at:timestamptz; safe_metadata:jsonb={}",
+      "rules": "Append-only y sin borrado en cascada. Registrar accesos/cambios/firma/archivos/IA mediante rutas o funciones controladas. Un trigger de escritura NO registra SELECT; lectura auditada necesita mecanismo especifico. Sin copiar expedientes completos, tokens ni claves al log.",
+      "query_indexes": "(organization_id,patient_id,occurred_at DESC,id); (organization_id,occurred_at DESC,id)",
+      "references": [
+        {
+          "columns": [
+            "organization_id",
+            "patient_id"
+          ],
+          "target": "patients",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        },
+        {
+          "columns": [
+            "organization_id",
+            "actor_member_id"
+          ],
+          "target": "organization_members",
+          "target_columns": [
+            "organization_id",
+            "id"
+          ],
+          "on_delete": "RESTRICT",
+          "on_update": "RESTRICT"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "common_columns": [
+        "id:uuid PK default gen_random_uuid()",
+        "created_at:timestamptz default now()",
+        "organization_id:uuid NOT NULL FK organizations.id ON DELETE RESTRICT"
+      ],
+      "reference_unique_keys": [
+        [
+          "organization_id",
+          "id"
+        ]
+      ],
+      "field_names": [
+        "patient_id",
+        "actor_member_id",
+        "actor_kind",
+        "action",
+        "entity_type",
+        "entity_id",
+        "occurred_at",
+        "safe_metadata",
+        "id",
+        "created_at",
+        "organization_id"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "S1",
+      "title": "Master Prompt suministrado por Jose",
+      "url": "https://app.notion.com/p/3dfb44cff9838177a986e4e718b227fc"
+    },
+    {
+      "id": "S2",
+      "title": "Step 4: criterio de aceptacion",
+      "url": "https://app.notion.com/p/3dfb44cff98381a8a8d5cd2b417815bf"
+    },
+    {
+      "id": "S3",
+      "title": "Healthcare Vertical",
+      "url": "https://app.notion.com/p/3dfb44cff98381fb8301eebe279e0777"
+    },
+    {
+      "id": "T1",
+      "title": "Supabase: RLS y grants",
+      "url": "https://supabase.com/docs/guides/database/postgres/row-level-security"
+    },
+    {
+      "id": "T2",
+      "title": "PostgreSQL 17: constraints y FK compuestas",
+      "url": "https://www.postgresql.org/docs/17/ddl-constraints.html"
+    },
+    {
+      "id": "T3",
+      "title": "Supabase Storage: acceso",
+      "url": "https://supabase.com/docs/guides/storage/security/access-control"
+    },
+    {
+      "id": "T4",
+      "title": "Supabase: migraciones",
+      "url": "https://supabase.com/docs/guides/deployment/database-migrations"
+    }
+  ],
+  "note": "Catalogo de diseno, NO script SQL ni JSON Schema de validacion de requests. Requiere revision de Jose."
+}
