@@ -1,0 +1,215 @@
+STEP 6 - VALIDATION EVIDENCE
+
+Environment: Node.js v22.16.0, TypeScript 5.8.3 (global installation in assistant environment).
+
+Executed:
+1) node --test tests/step6/validation.test.mjs: 30 passed / 30, no network and no DB writes.
+2) tsc --noEmit --strict --target ES2022 --lib ES2022,DOM src/features/auth/validation.ts: exit 0. This is NOT the full app typecheck.
+3) TS/TSX syntax and internal imports:
+TypeScript parser/transpiler: 5.8.3
+Source files parsed/transpiled: 22
+Syntax/transpile diagnostics: 0
+UI dependencies: alert, badge, button, card, field, input, spinner
+Existing UI: button. Required CLI additions: alert, badge, card, field, input, spinner
+Full application typechecking / dependency resolution: NOT RUN
+Next.js build / lint / browser / live Auth: NOT RUN
+Package-local @/ import targets: present
+No SQL migration is included.
+
+4) node --check tests/step6/guest-http.mjs: exit 0 (syntax only; HTTP tests NOT RUN).
+
+NOT RUN: full application lint / typecheck / build; UI rendering; real signup/email/login/logout/session refresh; HTTP smoke tests.
+Blockers: Git clone DNS failure; npm registry EAI_AGAIN; Next/React dependencies unavailable. Browser plugin not available; npx --offline playwright --version returned ENOTCACHED. No browser installed as a workaround, no fake SDK or UI stubs used as evidence.
+
+The following TAP is ONLY for the pure validation module, not authentication end-to-end:
+
+TAP version 13
+# Subtest: single text: accepts one string
+ok 1 - single text: accepts one string
+  ---
+  duration_ms: 15.341879
+  type: 'test'
+  ...
+# Subtest: single text: rejects absent value
+ok 2 - single text: rejects absent value
+  ---
+  duration_ms: 0.130186
+  type: 'test'
+  ...
+# Subtest: single text: rejects duplicate fields
+ok 3 - single text: rejects duplicate fields
+  ---
+  duration_ms: 0.093882
+  type: 'test'
+  ...
+# Subtest: single text: rejects a file
+ok 4 - single text: rejects a file
+  ---
+  duration_ms: 0.302837
+  type: 'test'
+  ...
+# Subtest: email: accepts an ordinary address
+ok 5 - email: accepts an ordinary address
+  ---
+  duration_ms: 0.215996
+  type: 'test'
+  ...
+# Subtest: email: rejects malformed and control character inputs
+ok 6 - email: rejects malformed and control character inputs
+  ---
+  duration_ms: 0.297939
+  type: 'test'
+  ...
+# Subtest: email: rejects overlong addresses
+ok 7 - email: rejects overlong addresses
+  ---
+  duration_ms: 0.284819
+  type: 'test'
+  ...
+# Subtest: registration: accepts matching long passwords
+ok 8 - registration: accepts matching long passwords
+  ---
+  duration_ms: 0.948882
+  type: 'test'
+  ...
+# Subtest: credentials: normalizes email but not password
+ok 9 - credentials: normalizes email but not password
+  ---
+  duration_ms: 0.580937
+  type: 'test'
+  ...
+# Subtest: registration: rejects short passwords
+ok 10 - registration: rejects short passwords
+  ---
+  duration_ms: 0.603691
+  type: 'test'
+  ...
+# Subtest: registration: rejects overlong passwords
+ok 11 - registration: rejects overlong passwords
+  ---
+  duration_ms: 0.301084
+  type: 'test'
+  ...
+# Subtest: registration: rejects confirmation mismatch
+ok 12 - registration: rejects confirmation mismatch
+  ---
+  duration_ms: 0.183817
+  type: 'test'
+  ...
+# Subtest: login: permits existing shorter passwords
+ok 13 - login: permits existing shorter passwords
+  ---
+  duration_ms: 0.16608
+  type: 'test'
+  ...
+# Subtest: login: rejects missing password
+ok 14 - login: rejects missing password
+  ---
+  duration_ms: 0.15901
+  type: 'test'
+  ...
+# Subtest: login: rejects empty password
+ok 15 - login: rejects empty password
+  ---
+  duration_ms: 0.151599
+  type: 'test'
+  ...
+# Subtest: credentials: duplicate email rejected
+ok 16 - credentials: duplicate email rejected
+  ---
+  duration_ms: 0.210929
+  type: 'test'
+  ...
+# Subtest: credentials: duplicate password rejected
+ok 17 - credentials: duplicate password rejected
+  ---
+  duration_ms: 0.136046
+  type: 'test'
+  ...
+# Subtest: error result contains no supplied password
+ok 18 - error result contains no supplied password
+  ---
+  duration_ms: 0.148344
+  type: 'test'
+  ...
+# Subtest: confirmation: accepts email token syntax only
+ok 19 - confirmation: accepts email token syntax only
+  ---
+  duration_ms: 0.105349
+  type: 'test'
+  ...
+# Subtest: confirmation: rejects alternative OTP types
+ok 20 - confirmation: rejects alternative OTP types
+  ---
+  duration_ms: 0.127041
+  type: 'test'
+  ...
+# Subtest: confirmation: rejects invalid token shapes and sizes
+ok 21 - confirmation: rejects invalid token shapes and sizes
+  ---
+  duration_ms: 0.122705
+  type: 'test'
+  ...
+# Subtest: origin: accepts loopback HTTP and normalizes slash
+ok 22 - origin: accepts loopback HTTP and normalizes slash
+  ---
+  duration_ms: 0.229145
+  type: 'test'
+  ...
+# Subtest: origin: accepts HTTPS
+ok 23 - origin: accepts HTTPS
+  ---
+  duration_ms: 0.082154
+  type: 'test'
+  ...
+# Subtest: origin: accepts numeric loopback and IPv6 loopback
+ok 24 - origin: accepts numeric loopback and IPv6 loopback
+  ---
+  duration_ms: 0.080371
+  type: 'test'
+  ...
+# Subtest: origin: rejects non-local insecure HTTP
+ok 25 - origin: rejects non-local insecure HTTP
+  ---
+  duration_ms: 0.182675
+  type: 'test'
+  ...
+# Subtest: origin: rejects credentials path query and fragment
+ok 26 - origin: rejects credentials path query and fragment
+  ---
+  duration_ms: 0.145249
+  type: 'test'
+  ...
+# Subtest: origin: rejects missing invalid and non-HTTP inputs
+ok 27 - origin: rejects missing invalid and non-HTTP inputs
+  ---
+  duration_ms: 0.286191
+  type: 'test'
+  ...
+# Subtest: public errors never echo arbitrary provider messages
+ok 28 - public errors never echo arbitrary provider messages
+  ---
+  duration_ms: 0.120112
+  type: 'test'
+  ...
+# Subtest: public errors distinguish throttling without reflecting raw text
+ok 29 - public errors distinguish throttling without reflecting raw text
+  ---
+  duration_ms: 0.089315
+  type: 'test'
+  ...
+# Subtest: public errors map expected provider codes
+ok 30 - public errors map expected provider codes
+  ---
+  duration_ms: 0.120032
+  type: 'test'
+  ...
+1..30
+# tests 30
+# suites 0
+# pass 30
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 272.769637
