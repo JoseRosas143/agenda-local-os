@@ -40,7 +40,7 @@ export default async function AccountPage({ searchParams }: {
         ) : organizations?.length ? (
           <div className="divide-y rounded-xl border bg-card">
             {organizations.map((organization) => (
-              <div key={organization.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-5 sm:px-6">
+              <Link key={organization.id} href={`/business/${organization.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-5 transition-colors hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring sm:px-6">
                 <div>
                   <h2 className="font-semibold">{organization.name}</h2>
                   <p className="mt-1 text-sm text-muted-foreground">{organization.slug} · {organization.currency} · {organization.timezone}</p>
@@ -48,7 +48,7 @@ export default async function AccountPage({ searchParams }: {
                 <span className="text-sm text-muted-foreground">
                   {organization.industry === "dental" ? "Dental" : organization.industry === "medical" ? "Médico" : "General"}
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         ) : (
