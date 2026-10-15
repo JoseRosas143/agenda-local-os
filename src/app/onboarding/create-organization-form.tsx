@@ -122,7 +122,7 @@ export function CreateOrganizationForm() {
 
         <Button type="submit" size="lg" className="mt-2 w-full" disabled={pending}>
           {pending ? <Spinner data-icon="inline-start" aria-hidden="true" /> : null}
-          {pending ? "Creando negocio…" : "Crear negocio"}
+          {pending ? "Creando negocio…" : "Crear y continuar"}
         </Button>
       </div>
     </form>

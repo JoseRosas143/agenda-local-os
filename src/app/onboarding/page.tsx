@@ -31,14 +31,15 @@ export default async function OnboardingPage() {
 
       <section className="mx-auto flex max-w-2xl flex-col px-5 pb-16 pt-12 sm:pt-20">
         <div className="mb-9 text-center">
+          <p className="mb-3 text-sm font-medium text-muted-foreground">Configuración del negocio · Pasos 1 y 2 de 9</p>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Crea tu negocio</h1>
           <p className="mx-auto mt-3 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Empieza con lo esencial. Después podrás invitar a tu equipo y personalizar cómo trabajas.
+            Empecemos por el nombre y el tipo de negocio. Guardaremos tu avance para que continúes cuando quieras.
           </p>
         </div>
         <CreateOrganizationForm />
         <p className="mt-5 text-center text-sm text-muted-foreground">
-          Podrás ajustar los detalles de tu negocio más adelante.
+          Los demás detalles se configuran después de crear el negocio.
         </p>
         <Link href="/account" className="mt-5 self-center text-sm underline underline-offset-4">
           Volver a mi cuenta

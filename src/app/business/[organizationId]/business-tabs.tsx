@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function BusinessTabs({ organizationId }: { organizationId: string }) {
+export function BusinessTabs({ organizationId, canManage }: { organizationId: string; canManage: boolean }) {
   const base = `/business/${organizationId}`;
   const pathname = usePathname();
   const tabs = [
     { href: base, label: "Resumen" },
     { href: `${base}/contacts`, label: "Contactos" },
     { href: `${base}/services`, label: "Servicios" },
+    ...(canManage ? [{ href: `${base}/setup`, label: "Configuración" }] : []),
   ];
   return (
     <nav aria-label="Secciones del negocio" className="flex gap-7 overflow-x-auto border-b text-sm">

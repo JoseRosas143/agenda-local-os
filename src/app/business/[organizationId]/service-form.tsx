@@ -11,22 +11,27 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 
-export function ServiceForm({ organizationId, serviceId, currency, initial }: {
+export function ServiceForm({ organizationId, serviceId, currency, initial, returnStep }: {
   organizationId: string; serviceId: string | null; currency: string; initial?: ServiceValues;
+  returnStep?: "4" | "5";
 }) {
   const [state, action, pending] = useActionState(
     saveServiceAction.bind(null, organizationId, serviceId), {} as ServiceFormState,
   );
   const values = state.values ?? initial;
-  const closeHref = `/business/${organizationId}/services`;
+  const closeHref = returnStep
+    ? `/business/${organizationId}/setup?step=${returnStep}`
+    : `/business/${organizationId}/services`;
   return (
     <aside className="border-t bg-background lg:fixed lg:top-[76px] lg:right-0 lg:bottom-0 lg:z-10 lg:w-[464px] lg:overflow-y-auto lg:border-l lg:border-t-0" aria-label={serviceId ? "Editar servicio" : "Nuevo servicio"}>
       <form action={action} aria-busy={pending} className="flex h-full flex-col gap-5 p-5 sm:p-7">
+        {returnStep ? <input type="hidden" name="returnStep" value={returnStep} /> : null}
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-xl font-semibold tracking-tight">{serviceId ? "Editar servicio" : "Nuevo servicio"}</h2>
           <Link href={closeHref} aria-label="Cerrar formulario" className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><X className="size-5" /></Link>
         </div>
         {state.message ? <Alert variant="destructive" role="status"><AlertDescription>{state.message}</AlertDescription></Alert> : null}
+        {returnStep ? <p className="text-sm text-muted-foreground">Paso {returnStep} de 9 · Configuración del negocio</p> : null}
         <div className="grid gap-1.5">
           <label htmlFor="service-name" className="text-sm font-medium">Nombre</label>
           <Input id="service-name" name="name" required maxLength={160} placeholder="Ej. Consulta inicial" defaultValue={values?.name ?? ""} aria-invalid={Boolean(state.fieldErrors?.name)} />

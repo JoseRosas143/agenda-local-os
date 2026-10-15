@@ -16,6 +16,7 @@ export async function createOrganizationAction(
     status: "error", fieldErrors: input.fieldErrors, values: input.values,
   };
 
+  let organizationId: string;
   try {
     const supabase = await createClient({ readOnly: false });
     const { data, error } = await supabase.rpc("create_organization", {
@@ -41,6 +42,7 @@ export async function createOrganizationAction(
         message: "No pudimos confirmar la creación. Revisa tu cuenta antes de intentarlo de nuevo.",
       };
     }
+    organizationId = data;
   } catch {
     return {
       status: "error", values: input.value,
@@ -49,5 +51,5 @@ export async function createOrganizationAction(
   }
 
   revalidatePath("/account");
-  redirect("/account?created=1");
+  redirect(`/business/${organizationId}/setup?step=3`);
 }

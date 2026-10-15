@@ -77,5 +77,10 @@ export async function saveServiceAction(
     return { message: "No pudimos confirmar el guardado. Revisa la lista antes de intentarlo otra vez.", values: input.value };
   }
   revalidatePath(`${basePath(organizationId)}/services`);
+  const returnStep = form.getAll("returnStep");
+  if (returnStep.length === 1 && (returnStep[0] === "4" || returnStep[0] === "5")) {
+    revalidatePath(`${basePath(organizationId)}/setup`);
+    redirect(`${basePath(organizationId)}/setup?step=${returnStep[0]}`);
+  }
   redirect(`${basePath(organizationId)}/services?${serviceId ? "updated" : "created"}=1`);
 }

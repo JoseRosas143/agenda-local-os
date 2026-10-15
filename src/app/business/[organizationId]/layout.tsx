@@ -14,7 +14,7 @@ export default async function BusinessLayout({ children, params }: {
   children: React.ReactNode; params: Promise<{ organizationId: string }>;
 }) {
   const { organizationId } = await params;
-  const { organization } = await getBusinessContext(organizationId);
+  const { organization, canManage } = await getBusinessContext(organizationId);
   return (
     <main lang="es" className="min-h-svh bg-background text-foreground">
       <header className="border-b">
@@ -28,7 +28,7 @@ export default async function BusinessLayout({ children, params }: {
           <ArrowLeft className="size-4" aria-hidden="true" />Mis negocios
         </Link>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{organization.name}</h1>
-        <div className="mt-5"><BusinessTabs organizationId={organizationId} /></div>
+        <div className="mt-5"><BusinessTabs organizationId={organizationId} canManage={canManage} /></div>
       </div>
       {children}
     </main>
